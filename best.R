@@ -6,40 +6,38 @@
 best <- function(state, outcome) {
   
   ## Read outcome data
-  outcomeData <- read.csv("outcome-of-care-measures.csv")
+  fileData <- read.csv("outcome-of-care-measures.csv", na.strings="Not Available", stringsAsFactors=FALSE)
   
   ## Check that state and outcome are valid
-  if (is.na(match(state, unique(outcomeData$State)))){
+  if(!state %in% unique(fileData$State)){
     stop("invalid state")
   }
   
-  if (is.na(match(outcome, c("heart attack", "heart failure", "pneumonia")))){
+  ## Defines a vector to test argument and after select outcome columns
+  outcomes <- c("heart attack" = 11, "heart failure" = 17, "pneumonia" = 23)
+  
+  if (!outcome %in% names(outcomes)){
     stop("invalid outcome")
   }  
   
-  ## Get the subset data for the specified state and sort it in alphabetical order by Hospital Name
-  ## so if there is a tie for the best hospital for a given outcome, then it will get the first one with wich.min
-  ## as defined on programming assignment description
-  outcomeDataState <- outcomeData[outcomeData$State == state,]
-  outcomeDataState <- outcomeDataState[order(outcomeDataState$Hospital.Name),]
+  ## Reducing data that will be manipulated (columns Hospital Name = 2, State = 7, Outcome - function argument)
+  outcomeStateData <- fileData[, c(2, 7, outcomes[outcome])]
+  names(outcomeStateData) <- c("hospital", "state", "outcome")
   
-  ## Uses wich.min to get the first hospital (alphabetically ordered above) on the specified state that matches
-  ## the minimun value for the outcome passed as an argument ("heart attack", "heart failure" or "pneumonia")
-  ## wich.min always discards NA values. So hospitals that do not have data on a particular outcome will be
+  ## Discards incomplete cases. So hospitals that do not have data on a particular outcome will be
   ## excluded from the set of hospitals when deciding the rankings.
+  outcomeStateData <- na.omit(outcomeStateData)
   
-  if (outcome == "heart attack") {
-    
-    bestHospitalonState <- outcomeDataState$Hospital.Name[which.min(outcomeDataState$Hospital.30.Day.Death..Mortality..Rates.from.Heart.Attack)]
+  ## Get the subset data for the specified state
+  outcomeStateData <- outcomeStateData[outcomeStateData$state == state,]
   
-  } else if (outcome == "heart failure") {
-      
-             bestHospitalonState <- outcomeDataState$Hospital.Name[which.min(outcomeDataState$Hospital.30.Day.Death..Mortality..Rates.from.Heart.Failure)]    
-         
-         } else {
-           
-               bestHospitalonState <- outcomeDataState$Hospital.Name[which.min(outcomeDataState$Hospital.30.Day.Death..Mortality..Rates.from.Pneumonia)]    
-           }
+  ## Sort it in alphabetical order by Hospital Name. So if there is a tie for the best hospital for a given outcome,
+  ## then it will get the first one with wich.min as defined on programming assignment description
+  outcomeStateData <- outcomeStateData[order(outcomeStateData$hospital),]
+
+  ## Uses wich.min to get the first hospital (alphabetically ordered above) on the specified state that matches
+  ## the minimun value for the outcome passed as an argument ("heart attack", "heart failure" or "pneumonia")  
+  bestHospitalonState <- outcomeStateData$hospital[which.min(outcomeStateData$outcome)]
   
   ## Return hospital name in that state with lowest 30-day death
   bestHospitalonState
